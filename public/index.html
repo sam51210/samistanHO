@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Samistan Home Office</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f3f2f1;color:#0b0c0c;}
+  header{background:#0b0c0c;color:#fff;padding:15px 30px;font-size:22px;font-weight:bold;}
+  .crown{color:#ffdd00;}
+  main{max-width:600px;margin:30px auto;background:#fff;padding:30px;border-top:5px solid #1d70b8;}
+  h1{font-size:28px;margin-top:0;}
+  label{font-weight:bold;display:block;margin-bottom:5px;}
+  input{font-size:18px;padding:8px;width:100%;box-sizing:border-box;border:2px solid #0b0c0c;}
+  button{margin-top:15px;background:#00703c;color:#fff;border:0;padding:12px 20px;font-size:18px;cursor:pointer;}
+  button:hover{background:#005a30;}
+  .result{margin-top:25px;padding:15px;border-left:5px solid #ccc;}
+  .valid{color:#00703c;border-color:#00703c;font-weight:bold;}
+  .invalid{color:#d4351c;border-color:#d4351c;font-weight:bold;}
+  .details{color:#0b0c0c;font-weight:normal;margin-top:8px;}
+</style>
+</head>
+<body>
+<header>Samistan Home Office</header>
+<main>
+  <h1>Check a passport</h1>
+
+  <label for="pn">Passport number</label>
+  <input id="pn" type="text" placeholder="e.g. 123456789">
+  <button onclick="checkPassport()">Check</button>
+
+  <div id="result"></div>
+</main>
+
+<script>
+function formatDate(dateStr){
+  const d = new Date(dateStr);
+  if(isNaN(d)) return dateStr;
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const day = d.getDate();
+  const suffix = (day % 10 === 1 && day !== 11) ? "st"
+               : (day % 10 === 2 && day !== 12) ? "nd"
+               : (day % 10 === 3 && day !== 13) ? "rd" : "th";
+  return `${months[d.getMonth()]} ${day}${suffix}, ${d.getFullYear()}`;
+}
+ 
+async function checkPassport(){
+  const pn = document.getElementById('pn').value.trim();
+  const resultDiv = document.getElementById('result');
+  resultDiv.innerHTML = 'Checking...';
+  if(!pn){ resultDiv.innerHTML = ''; return; }
+ 
+  try{
+    const res = await fetch(`/api/check-passport?number=${encodeURIComponent(pn)}`);
+    const data = await res.json();
+ 
+    if(!data || data.length === 0){
+      resultDiv.innerHTML = `<div class="result invalid">This is not a valid passport number.</div>`;
+      return;
+    }
+ 
+    const p = data[0];
+    const name = `${p.surname}, ${p.firstname}`;
+ 
+    if(p.status === 'valid'){
+      resultDiv.innerHTML = `
+        <div class="result valid">This is a valid passport number.
+          <div class="details">${name}<br>Expires: ${formatDate(p.expires_at)}</div>
+        </div>`;
+    } else if(p.status === 'expired'){
+      resultDiv.innerHTML = `
+        <div class="result invalid">This is an expired passport belonging to ${name}.
+          <div class="details">Expired: ${formatDate(p.expires_at)}</div>
+        </div>`;
+    } else {
+      resultDiv.innerHTML = `<div class="result invalid">This is not a valid passport number.</div>`;
+    }
+  }catch(e){
+    resultDiv.innerHTML = `<div class="result invalid">Error contacting the passport service.</div>`;
+  }
+}
+</script>
+</body>
+</html>
