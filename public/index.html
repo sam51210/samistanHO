@@ -30,6 +30,20 @@
 
   <div id="result"></div>
 </main>
+<main>
+  <h1>Renew an expired passport</h1>
+
+  <p>To renew an expired passport, visit <a href="https://gov.samistan.org/renew?lang=en&newtest=Y" target="_blank">gov.samistan.org/renew</a>.</p>
+</main>
+<main>
+  <h1>End your citizenship</h1>
+
+  <p>To terminate your citizenship, enter your passport number to see if you are eligible.</p>
+  <label for="pn2">Passport number</label>
+  <input id="pn2" type="text" placeholder="e.g. 123456789">
+  <button onclick="checkPassport2()">Check</button>
+  <div id="result2"></div>
+</main>
 
 <script>
 function formatDate(dateStr){
@@ -71,6 +85,38 @@ async function checkPassport(){
         <div class="result invalid">This is an expired passport belonging to ${name}.
           <div class="details">Expired: ${formatDate(p.expires_at)}</div>
         </div>`;
+    } else {
+      resultDiv.innerHTML = `<div class="result invalid">This is not a valid passport number.</div>`;
+    }
+  }catch(e){
+    resultDiv.innerHTML = `<div class="result invalid">Error contacting the passport service.</div>`;
+  }
+}
+
+async function checkPassport2(){
+  const pn = document.getElementById('pn2').value.trim();
+  const resultDiv = document.getElementById('result2');
+  resultDiv.innerHTML = 'Checking...';
+  if(!pn){ resultDiv.innerHTML = ''; return; }
+ 
+  try{
+    const res = await fetch(`/api/check-passport?number=${encodeURIComponent(pn)}`);
+    const data = await res.json();
+ 
+    if(!data || data.length === 0){
+      resultDiv.innerHTML = `<div class="result invalid">Your citizenship has already been terminated.</div>`;
+      return;
+    }
+ 
+    const p = data[0];
+    const name = `${p.surname}, ${p.firstname}`;
+ 
+    if(p.status === 'valid'){
+      resultDiv.innerHTML = `
+        <div class="result valid">Hello ${name}! You have until ${formatDate(p.expires_at)} to terminate your citizenship. Email homeoffice@samistan.org, from the email used to register, with your passport number and name to do so.</div>`;
+    } else if(p.status === 'expired'){
+      resultDiv.innerHTML = `
+        <div class="result invalid">Your time to terminate your citizenship expired on ${formatDate(p.expires_at)}. You will need to renew your citizenship above.</div>`;
     } else {
       resultDiv.innerHTML = `<div class="result invalid">This is not a valid passport number.</div>`;
     }
